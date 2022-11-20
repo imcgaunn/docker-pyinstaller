@@ -1,0 +1,32 @@
+---
+image: nexus.dev.interactions.net:5001/iact/slaves/docker-slave:latest
+
+before_script:
+  - 'which ssh-agent || (apt-get update -y && apt-get install openssh-client -y) || (apk --update add openssh-client)'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "${CI_DEPLOY_USER_PRIVKEY_B64}" | base64 -d)
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+
+stages:
+  - publish
+
+publish_docker_image:
+  tags:
+    - docker
+  stage: publish
+  script:
+    - make tag-image
+    - make publish-image
+  only:
+    - master
+    - /^integration.*$/
+
